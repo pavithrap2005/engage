@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Indiquer Widget Embed Test Page</title>
+  <!-- Google Outfit Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: linear-gradient(135deg, #0b0f19 0%, #151b2c 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 20px;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      padding: 40px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+      box-sizing: border-box;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      margin-top: 0;
+      background: linear-gradient(135deg, #a78bfa 0%, #6366f1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p {
+      color: #94a3b8;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .input-group {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      text-align: left;
+    }
+    label {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+    input {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: white;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus {
+      border-color: #6366f1;
+    }
+    button {
+      margin-top: 18px;
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: opacity 0.2s;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .status {
+      margin-top: 15px;
+      font-size: 12px;
+      color: #34d399;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>Widget Embed Playground</h1>
+    <p>
+      Create a SaaS user account in the dashboard, fetch your workspace <strong>appId</strong> from the <i>Widget Designer</i> settings, paste it here, and initialize to test the float.
+    </p>
+
+    <div class="input-group">
+      <label for="app-id">Widget App ID</label>
+      <input type="text" id="app-id" placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000">
+    </div>
+
+    <button id="init-btn">Initialize Chat Widget</button>
+    <div class="status" id="status-msg">✓ Widget loaded. Check the bottom right corner of this page!</div>
+  </div>
+
+  <!-- Load Compiled Widget from Live Backend Server -->
+  <script src="http://100.123.62.66:9302/widget.js"></script>
+  
+  <script>
+    document.getElementById('init-btn').addEventListener('click', function() {
+      const appId = document.getElementById('app-id').value.trim();
+      if (!appId) {
+        alert('Please enter a valid App ID first!');
+        return;
+      }
+      
+      // Call Indiquer Widget init
+      if (window.Indiquer) {
+        window.Indiquer.init({
+          appId: appId,
+          apiHost: 'http://100.123.62.66:9302'
+        });
+        document.getElementById('status-msg').style.display = 'block';
+      } else {
+        alert('Indiquer widget script not found or failed to load. Make sure the server is running on http://100.123.62.66:9302!');
+      }
+    });
+  </script>
+</body>
+</html>

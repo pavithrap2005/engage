@@ -1,0 +1,219 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Enums mapped to Strings for SQLite compatibility
+// Role: OWNER, ADMIN, AGENT
+// InvitationStatus: PENDING, ACCEPTED, EXPIRED
+// SenderType: VISITOR, AGENT, SYSTEM, BOT
+// ChatStatus: WAITING, OPEN, CLOSED
+// ModelProvider: OPENAI, CLAUDE, GEMINI, OLLAMA, OPENROUTER
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String
+  firstName    String?
+  lastName     String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  memberships  Membership[]
+  chats        ChatRoom[]    @relation("AgentChats")
+  auditLogs    AuditLog[]
+}
+
+model Organization {
+  id               String       @id @default(uuid())
+  name             String
+  logoUrl          String?
+  customBranding   String?      // Stored as JSON string
+  subscriptionTier String       @default("FREE_TRIAL") // FREE_TRIAL, STARTER, PROFESSIONAL, ENTERPRISE
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  workspaces       Workspace[]
+  memberships      Membership[]
+  invitations      Invitation[]
+  auditLogs        AuditLog[]
+}
+
+model Workspace {
+  id             String       @id @default(uuid())
+  name           String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  widgets        Widget[]
+  visitors       Visitor[]
+  chatRooms      ChatRoom[]
+  bots           Bot[]
+
+  @@index([organizationId])
+}
+
+model Membership {
+  id             String       @id @default(uuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           String       @default("AGENT") // OWNER, ADMIN, AGENT
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+model Invitation {
+  id             String           @id @default(uuid())
+  email          String
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           String           @default("AGENT")
+  token          String           @unique
+  status         String           @default("PENDING") // PENDING, ACCEPTED, EXPIRED
+  expiresAt      DateTime
+  createdAt      DateTime         @default(now())
+
+  @@index([organizationId])
+  @@index([email])
+}
+
+model Widget {
+  id                 String               @id @default(uuid())
+  workspaceId        String
+  workspace          Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name               String
+  appId              String               @unique @default(uuid())
+  domainRestriction  String?              // Allowed domains comma separated
+  isActive           Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  customization      WidgetCustomization?
+
+  @@index([workspaceId])
+}
+
+model WidgetCustomization {
+  id             String   @id @default(uuid())
+  widgetId       String   @unique
+  widget         Widget   @relation(fields: [widgetId], references: [id], onDelete: Cascade)
+  color          String   @default("#4F46E5") // Main brand color
+  gradient       String?  // Optional gradient CSS
+  shape          String   @default("ROUND")   // ROUND, SQUARE, PILOT
+  logoUrl        String?
+  position       String   @default("BOTTOM_RIGHT") // BOTTOM_RIGHT, BOTTOM_LEFT
+  welcomeMessage String   @default("Hello! How can we help you today?")
+  offlineMessage String   @default("We are currently offline. Please leave a message!")
+  autoOpen       Boolean  @default(false)
+  delayTimer     Int      @default(3) // Seconds before opening
+  isDarkMode     Boolean  @default(false)
+  customCss      String?
+  updatedAt      DateTime @updatedAt
+}
+
+model Visitor {
+  id           String       @id @default(uuid())
+  workspaceId  String
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  browser      String?
+  device       String?
+  os           String?
+  country      String?
+  city         String?
+  ipAddress    String?
+  language     String?
+  timeZone     String?
+  firstSeen    DateTime     @default(now())
+  lastSeen     DateTime     @default(now())
+  sessions     Session[]
+  chatRooms    ChatRoom[]
+
+  @@index([workspaceId])
+}
+
+model Session {
+  id            String   @id @default(uuid())
+  visitorId     String
+  visitor       Visitor  @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  referrer      String?
+  utmSource     String?
+  visitDuration Int      @default(0) // Seconds
+  currentUrl    String?
+  createdAt     DateTime @default(now())
+
+  @@index([visitorId])
+}
+
+model ChatRoom {
+  id             String       @id @default(uuid())
+  workspaceId    String
+  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  visitorId      String
+  visitor        Visitor      @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  assignedAgentId String?
+  assignedAgent  User?        @relation("AgentChats", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  status         String       @default("WAITING") // WAITING, OPEN, CLOSED
+  rating         Int?
+  feedback       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  messages       Message[]
+
+  @@index([workspaceId])
+  @@index([visitorId])
+  @@index([assignedAgentId])
+}
+
+model Message {
+  id         String     @id @default(uuid())
+  chatRoomId String
+  chatRoom   ChatRoom   @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  senderType String     @default("VISITOR") // VISITOR, AGENT, SYSTEM, BOT
+  senderId   String?    // User ID if Agent, Visitor ID if Visitor, Bot ID if Bot, null if system
+  content    String
+  fileUrl    String?
+  isRead     Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+
+  @@index([chatRoomId])
+}
+
+model Bot {
+  id                String        @id @default(uuid())
+  workspaceId       String
+  workspace         Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name              String
+  isActive          Boolean       @default(false)
+  modelProvider     String        @default("GEMINI") // OPENAI, CLAUDE, GEMINI, OLLAMA, OPENROUTER
+  apiKey            String?
+  prompt            String        @default("You are a helpful customer support bot.")
+  knowledgeBaseUrl  String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([workspaceId])
+}
+
+model AuditLog {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action         String       // E.g., USER_LOGIN, INVITATION_SENT
+  targetType     String?      // E.g., USER, WIDGET, INVITATION
+  targetId       String?
+  details        String?      // Stored as JSON string
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+}

@@ -1,0 +1,24 @@
+{
+  "name": "indiquer-engage",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Indiquer Engage - AI-Powered Customer Engagement Platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev -w apps/backend",
+    "dev:frontend": "npm run dev -w apps/frontend",
+    "dev:widget": "npm run dev -w packages/widget",
+    "build:backend": "npm run build -w apps/backend",
+    "build:frontend": "npm run build -w apps/frontend",
+    "build:widget": "npm run build -w packages/widget",
+    "build": "npm run build --workspaces --if-present",
+    "db:migrate": "npm run db:migrate -w apps/backend",
+    "db:studio": "npm run db:studio -w apps/backend"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

@@ -2,11 +2,11 @@ import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { join } from 'path';
 
-const dbPath = join(process.cwd(), 'prisma', 'dev.db').replace(/\\/g, '/');
+const dbUrl = process.env.DATABASE_URL || `file:${join(process.cwd(), 'prisma', 'dev.db').replace(/\\/g, '/')}`;
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: `file:${dbPath}`
+      url: dbUrl
     }
   }
 });

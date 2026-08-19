@@ -12,25 +12,13 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - DATABASE_URL=postgresql://indiquer_user:indiquer_password@postgres:5432/indiquer_engage_prod?schema=public
+      - DATABASE_URL=file:/app/prisma/dev.db
       - JWT_SECRET=indiquer_engage_jwt_secret_key_prod_2026
       - GROQ_API_KEY=${GROQ_API_KEY}
-    depends_on:
-      - postgres
-
-  postgres:
-    image: postgres:15-alpine
-    container_name: indiquer_postgres
-    restart: always
-    environment:
-      POSTGRES_USER: indiquer_user
-      POSTGRES_PASSWORD: indiquer_password
-      POSTGRES_DB: indiquer_engage_prod
-    ports:
-      - "5432:5432"
+      - GROQ_MODEL=openai/gpt-oss-120b
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - engage_db_data:/app/prisma
 
 volumes:
-  postgres_data:
+  engage_db_data:
     driver: local

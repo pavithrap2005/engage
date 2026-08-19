@@ -1,0 +1,17 @@
+# Ignore databases anywhere in the repo
+**/*.db
+**/*.db-journal
+**/*.db-wal
+
+# Ignore logs
+**/*.log
+npm-debug.log*
+
+# Ignore dependencies & build outputs
+**/node_modules/
+**/dist/
+**/build/
+
+# Ignore local configs
+**/.env
+**/.env.local

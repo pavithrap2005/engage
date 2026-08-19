@@ -2,14 +2,18 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Serve static assets (widget script)
-  app.useStaticAssets(join(__dirname, '..', 'public'));
+  // Serve static assets (widget script and test pages)
+  const publicPath = existsSync(join(process.cwd(), 'public'))
+    ? join(process.cwd(), 'public')
+    : join(__dirname, '..', 'public');
+  app.useStaticAssets(publicPath);
 
   // Set global route prefix
   app.setGlobalPrefix('api');

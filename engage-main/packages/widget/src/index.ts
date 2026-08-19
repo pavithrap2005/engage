@@ -539,9 +539,7 @@ class IndiquerWidget {
 
     if (this.isOpen) {
       launcher.classList.add('open');
-      if (chatWindow) {
-        chatWindow.classList.add('open');
-      }
+      chatWindow.classList.add('open');
       launcher.innerHTML = `
         <svg viewBox="0 0 24 24">
           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -807,6 +805,18 @@ class IndiquerWidget {
         }
       });
     }
+  }
+
+  public open() {
+    this.toggleChat(true);
+  }
+
+  public close() {
+    this.toggleChat(false);
+  }
+
+  public toggle() {
+    this.toggleChat();
   }
 }
 

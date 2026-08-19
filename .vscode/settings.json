@@ -1,0 +1,16 @@
+{
+  "liveServer.settings.ignoreFiles": [
+    "**/*.db",
+    "**/*.db-journal",
+    "**/*.db-wal",
+    "**/*.db-shm",
+    "**/*.sqlite",
+    "**/*.sqlite3",
+    "**/*.log",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.git/**",
+    "**/prisma/**"
+  ],
+  "liveServer.settings.donotShowInfoMsg": true
+}

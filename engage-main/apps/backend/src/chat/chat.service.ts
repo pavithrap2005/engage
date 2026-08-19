@@ -206,59 +206,84 @@ export class ChatService {
       return '';
     }
 
-    try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          temperature: 0.6,
-          max_tokens: 200
-        })
-      });
+    const models = [
+      process.env.GROQ_MODEL,
+      'openai/gpt-oss-120b',
+      'openai/gpt-oss-20b',
+      'qwen/qwen3.6-27b',
+      'groq/compound-mini'
+    ].filter(Boolean) as string[];
 
-      if (!res.ok) {
-        throw new Error(`Groq returned status ${res.status}`);
+    for (const model of models) {
+      try {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.6,
+            max_tokens: 250
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const reply = data.choices?.[0]?.message?.content?.trim();
+          if (reply) {
+            return reply;
+          }
+        }
+      } catch (err) {
+        console.error(`Groq query failed with model ${model}:`, err);
       }
-
-      const data = await res.json();
-      return data.choices?.[0]?.message?.content?.trim() || '';
-    } catch (err) {
-      console.error('Groq query failed:', err);
-      return '';
     }
+
+    return '';
   }
 
   async triggerBotResponse(roomId: string, workspaceId: string, visitorMessage: string) {
-    const systemPrompt = `You are a helpful customer support bot for Indiquer Engage.
-You answer support questions professionally, concisely, and helpfully.
-Our pricing tiers are:
-- Starter: $19/mo (1 Workspace, basic tracking)
-- Professional: $49/mo (Multiple workspaces, CRM integration)
-- Enterprise: Custom (Unlimited workspaces, high-performance SLAs)
-Our features: Lightweight floatable Shadow DOM Chat Widgets, real-time Socket.IO agent console, Active Visitor Tracking dashboards, and automation rules.
-Our refund policy: Full refund within 14 days of purchase.
-Keep your answers under 3 sentences. If the user wants to speak to a human or agent, explicitly state that you will notify an agent.`;
+    // 1. Fetch the Bot configured for this workspace
+    const bot = await this.prisma.bot.findFirst({
+      where: {
+        workspaceId,
+        isActive: true,
+      },
+    });
+
+    const botName = bot?.name || 'AI Assistant';
+    let systemPrompt = '';
+
+    if (bot && bot.prompt) {
+      systemPrompt = `You are an AI assistant named "${botName}".
+${bot.prompt}
+
+Guidelines:
+- Answer questions accurately, concisely, and helpfully based strictly on your identity and knowledge.
+- If the user asks something completely outside of your app, domain, or knowledge, politely explain that you are the assistant for "${botName}" and only answer questions related to it.
+- Keep responses concise (under 3-4 sentences).
+- If the visitor specifically asks to talk to a human or live support agent, clearly state that you will notify an agent.`;
+    } else {
+      systemPrompt = `You are a helpful customer support assistant named "${botName}".
+Answer questions professionally, politely, and concisely.
+Keep your answers under 3 sentences. If the user wants to speak to a human or agent, state that you will notify an agent.`;
+    }
 
     let reply = await this.queryGroq(systemPrompt, visitorMessage);
 
-    // Fallback if Groq query fails
+    // Fallback if Groq query fails or times out
     if (!reply) {
       const text = visitorMessage.toLowerCase();
-      reply = "Hello! I am the Indiquer AI bot. How can I help you today?";
-      if (text.includes('price') || text.includes('pricing') || text.includes('cost')) {
-        reply = "Our pricing tiers are:\n- Starter: $19/mo (1 Workspace, basic tracking)\n- Professional: $49/mo (Multiple workspaces, CRM integration)\n- Enterprise: Custom (Unlimited workspaces, high-performance SLAs). Let me know if you would like me to connect a sales representative!";
-      } else if (text.includes('feature') || text.includes('sdk') || text.includes('widget')) {
-        reply = "Indiquer Engage provides:\n- Lightweight floatable Shadow DOM Chat Widgets\n- Real-time Socket.IO agent console\n- Active Visitor Tracking dashboards\n- Omnichannel inbox integrations.";
-      } else if (text.includes('human') || text.includes('agent') || text.includes('support') || text.includes('help')) {
+      if (text.includes('human') || text.includes('agent') || text.includes('support') || text.includes('help')) {
         reply = "I understand you need to speak with a human. I am notifying an agent right now. Please wait in this chat window!";
+      } else {
+        reply = `Hello! I am the ${botName}. How can I assist you with your questions today?`;
       }
     }
 
@@ -280,7 +305,7 @@ Keep your answers under 3 sentences. If the user wants to speak to a human or ag
     }
 
     // Save BOT message
-    return this.saveMessage(roomId, 'BOT', 'AI_BOT_ROOT', reply);
+    return this.saveMessage(roomId, 'BOT', bot?.id || 'AI_BOT_ROOT', reply);
   }
 
   async getAiSuggestionForRoom(roomId: string) {

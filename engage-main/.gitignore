@@ -20,6 +20,9 @@ widget.js
 /postgres_data/
 /redis_data/
 /meilisearch_data/
+*.db
+*.db-journal
+*.db-wal
 
 # IDE / System
 .idea/
